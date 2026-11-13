@@ -1,0 +1,391 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Public-safe user travel profile and preferences.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth user ID."
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Traveler display name."
+        },
+        "photoURL": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Optional profile photo URL."
+        },
+        "preferredCurrency": {
+          "type": "string",
+          "enum": ["USD", "EUR", "GBP", "JPY"],
+          "description": "Preferred display currency."
+        },
+        "travelStyle": {
+          "type": "string",
+          "enum": ["Cultural", "Alpine & Rail", "Coastal", "Slow Luxury", "Adventure"],
+          "description": "Traveler preferred trip style."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Profile creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp."
+        }
+      },
+      "required": ["uid", "displayName", "preferredCurrency", "travelStyle", "createdAt", "updatedAt"]
+    },
+    "UserPrivateInfo": {
+      "title": "UserPrivateInfo",
+      "description": "Isolated PII record containing contact and passport preferences.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 180
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "homeAirport": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "passportNationality": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "createdAt", "updatedAt"]
+    },
+    "SavedTrip": {
+      "title": "SavedTrip",
+      "description": "A destination, package, stay, or route bookmarked by a traveler.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "itemId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "itemType": {
+          "type": "string",
+          "enum": ["package", "destination", "hotel", "flight", "bus", "car"]
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "subtitle": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "priceUsd": {
+          "type": "number"
+        },
+        "imageUrl": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "itemId", "itemType", "title", "subtitle", "priceUsd", "imageUrl", "createdAt"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "A confirmed or cancellation-requested travel reservation.",
+      "type": "object",
+      "properties": {
+        "bookingRef": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 32,
+          "pattern": "^[A-Z0-9\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "travelerName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "travelerEmail": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 180
+        },
+        "travelerPhone": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 40
+        },
+        "itemId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "itemType": {
+          "type": "string",
+          "enum": ["package", "flight", "hotel", "bus", "car"]
+        },
+        "itemTitle": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 180
+        },
+        "destinationName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "departureDate": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 32
+        },
+        "returnDate": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 32
+        },
+        "adults": {
+          "type": "integer"
+        },
+        "children": {
+          "type": "integer"
+        },
+        "cabinOrRoom": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "basePriceUsd": {
+          "type": "number"
+        },
+        "taxesAndFeesUsd": {
+          "type": "number"
+        },
+        "totalPriceUsd": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["confirmed", "cancellation_requested", "cancelled"]
+        },
+        "cancellationReason": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "specialRequests": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "bookingRef",
+        "userId",
+        "travelerName",
+        "travelerEmail",
+        "travelerPhone",
+        "itemId",
+        "itemType",
+        "itemTitle",
+        "destinationName",
+        "departureDate",
+        "returnDate",
+        "adults",
+        "children",
+        "cabinOrRoom",
+        "basePriceUsd",
+        "taxesAndFeesUsd",
+        "totalPriceUsd",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SupportTicket": {
+      "title": "SupportTicket",
+      "description": "Customer support inquiry submitted by an authenticated traveler.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 160
+        },
+        "category": {
+          "type": "string",
+          "enum": ["Booking Change", "Cancellation & Refund", "Baggage & Transit", "Billing", "General Inquiry"]
+        },
+        "bookingRef": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "message": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 2000
+        },
+        "contactEmail": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 180
+        },
+        "status": {
+          "type": "string",
+          "enum": ["open", "in_review", "resolved"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "subject", "category", "message", "contactEmail", "status", "createdAt", "updatedAt"]
+    },
+    "TravelReview": {
+      "title": "TravelReview",
+      "description": "Verified traveler review on a destination or tour package.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "itemId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "itemTitle": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 180
+        },
+        "authorName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "rating": {
+          "type": "integer"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 120
+        },
+        "comment": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 1200
+        },
+        "travelDate": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 32
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "itemId", "itemTitle", "authorName", "rating", "title", "comment", "travelDate", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Non-PII traveler profile preferences keyed by Firebase Auth UID."
+    },
+    "/users/{userId}/private/{docId}": {
+      "schema": { "$ref": "#/entities/UserPrivateInfo" },
+      "description": "Isolated PII contact and passport metadata restricted strictly to the owner."
+    },
+    "/users/{userId}/savedTrips/{tripId}": {
+      "schema": { "$ref": "#/entities/SavedTrip" },
+      "description": "Traveler saved itineraries, hotels, flights, and packages."
+    },
+    "/bookings/{bookingId}": {
+      "schema": { "$ref": "#/entities/Booking" },
+      "description": "Persistent travel bookings owned by users with strict state transitions."
+    },
+    "/supportTickets/{ticketId}": {
+      "schema": { "$ref": "#/entities/SupportTicket" },
+      "description": "Authenticated traveler support requests."
+    },
+    "/reviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/TravelReview" },
+      "description": "Publicly readable traveler reviews authored by verified signed-in users."
+    }
+  }
+}

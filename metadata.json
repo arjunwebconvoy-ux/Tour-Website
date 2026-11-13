@@ -1,0 +1,6 @@
+{
+  "name": "Wayfare — Curated Tour & Travel Booking",
+  "description": "Discover global destinations, compare flights, stays, buses, and car rentals, and book curated tour packages with transparent pricing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

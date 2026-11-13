@@ -1,0 +1,294 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: default deny everything
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core helper primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        request.auth.token.email == 'arjun9676kumar@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'preferredCurrency', 'travelStyle', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'displayName', 'photoURL', 'preferredCurrency', 'travelStyle', 'createdAt', 'updatedAt'])
+        && isValidId(data.uid)
+        && data.uid == request.auth.uid
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
+        && (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 500))
+        && data.preferredCurrency in ['USD', 'EUR', 'GBP', 'JPY']
+        && data.travelStyle in ['Cultural', 'Alpine & Rail', 'Coastal', 'Slow Luxury', 'Adventure']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidUserPrivateInfo(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'phone', 'homeAirport', 'passportNationality', 'createdAt', 'updatedAt'])
+        && isValidId(data.uid)
+        && data.uid == request.auth.uid
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 180
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 40))
+        && (!('homeAirport' in data) || (data.homeAirport is string && data.homeAirport.size() <= 64))
+        && (!('passportNationality' in data) || (data.passportNationality is string && data.passportNationality.size() <= 80))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSavedTrip(data) {
+      return data.keys().hasAll(['userId', 'itemId', 'itemType', 'title', 'subtitle', 'priceUsd', 'imageUrl', 'createdAt'])
+        && data.keys().hasOnly(['userId', 'itemId', 'itemType', 'title', 'subtitle', 'priceUsd', 'imageUrl', 'createdAt'])
+        && isValidId(data.userId)
+        && data.userId == request.auth.uid
+        && isValidId(data.itemId)
+        && data.itemType in ['package', 'destination', 'hotel', 'flight', 'bus', 'car']
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 160
+        && data.subtitle is string && data.subtitle.size() >= 1 && data.subtitle.size() <= 200
+        && (data.priceUsd is int || data.priceUsd is float) && data.priceUsd >= 0 && data.priceUsd <= 250000
+        && data.imageUrl is string && data.imageUrl.size() >= 1 && data.imageUrl.size() <= 400
+        && data.createdAt is timestamp;
+    }
+
+    function isValidBooking(data) {
+      return data.keys().hasAll([
+          'bookingRef', 'userId', 'travelerName', 'travelerEmail', 'travelerPhone',
+          'itemId', 'itemType', 'itemTitle', 'destinationName', 'departureDate',
+          'returnDate', 'adults', 'children', 'cabinOrRoom', 'basePriceUsd',
+          'taxesAndFeesUsd', 'totalPriceUsd', 'status', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'bookingRef', 'userId', 'travelerName', 'travelerEmail', 'travelerPhone',
+          'itemId', 'itemType', 'itemTitle', 'destinationName', 'departureDate',
+          'returnDate', 'adults', 'children', 'cabinOrRoom', 'basePriceUsd',
+          'taxesAndFeesUsd', 'totalPriceUsd', 'status', 'cancellationReason',
+          'specialRequests', 'createdAt', 'updatedAt'
+        ])
+        && data.bookingRef is string && data.bookingRef.size() >= 4 && data.bookingRef.size() <= 32 && data.bookingRef.matches('^[A-Z0-9\\-]+$')
+        && isValidId(data.userId)
+        && data.travelerName is string && data.travelerName.size() >= 2 && data.travelerName.size() <= 120
+        && data.travelerEmail is string && data.travelerEmail.size() >= 3 && data.travelerEmail.size() <= 180
+        && data.travelerPhone is string && data.travelerPhone.size() >= 5 && data.travelerPhone.size() <= 40
+        && isValidId(data.itemId)
+        && data.itemType in ['package', 'flight', 'hotel', 'bus', 'car']
+        && data.itemTitle is string && data.itemTitle.size() >= 2 && data.itemTitle.size() <= 180
+        && data.destinationName is string && data.destinationName.size() >= 2 && data.destinationName.size() <= 120
+        && data.departureDate is string && data.departureDate.size() >= 8 && data.departureDate.size() <= 32
+        && data.returnDate is string && data.returnDate.size() >= 8 && data.returnDate.size() <= 32
+        && data.adults is int && data.adults >= 1 && data.adults <= 16
+        && data.children is int && data.children >= 0 && data.children <= 12
+        && data.cabinOrRoom is string && data.cabinOrRoom.size() >= 2 && data.cabinOrRoom.size() <= 80
+        && (data.basePriceUsd is int || data.basePriceUsd is float) && data.basePriceUsd >= 0 && data.basePriceUsd <= 500000
+        && (data.taxesAndFeesUsd is int || data.taxesAndFeesUsd is float) && data.taxesAndFeesUsd >= 0 && data.taxesAndFeesUsd <= 100000
+        && (data.totalPriceUsd is int || data.totalPriceUsd is float) && data.totalPriceUsd >= 0 && data.totalPriceUsd <= 600000
+        && data.status in ['confirmed', 'cancellation_requested', 'cancelled']
+        && (!('cancellationReason' in data) || (data.cancellationReason is string && data.cancellationReason.size() <= 400))
+        && (!('specialRequests' in data) || (data.specialRequests is string && data.specialRequests.size() <= 500))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSupportTicket(data) {
+      return data.keys().hasAll(['userId', 'subject', 'category', 'message', 'contactEmail', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['userId', 'subject', 'category', 'bookingRef', 'message', 'contactEmail', 'status', 'createdAt', 'updatedAt'])
+        && isValidId(data.userId)
+        && data.subject is string && data.subject.size() >= 3 && data.subject.size() <= 160
+        && data.category in ['Booking Change', 'Cancellation & Refund', 'Baggage & Transit', 'Billing', 'General Inquiry']
+        && (!('bookingRef' in data) || (data.bookingRef is string && data.bookingRef.size() <= 32))
+        && data.message is string && data.message.size() >= 10 && data.message.size() <= 2000
+        && data.contactEmail is string && data.contactEmail.size() >= 3 && data.contactEmail.size() <= 180
+        && data.status in ['open', 'in_review', 'resolved']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidReview(data) {
+      return data.keys().hasAll(['userId', 'itemId', 'itemTitle', 'authorName', 'rating', 'title', 'comment', 'travelDate', 'createdAt'])
+        && data.keys().hasOnly(['userId', 'itemId', 'itemTitle', 'authorName', 'rating', 'title', 'comment', 'travelDate', 'createdAt'])
+        && isValidId(data.userId)
+        && data.userId == request.auth.uid
+        && isValidId(data.itemId)
+        && data.itemTitle is string && data.itemTitle.size() >= 2 && data.itemTitle.size() <= 180
+        && data.authorName is string && data.authorName.size() >= 2 && data.authorName.size() <= 80
+        && data.rating is int && data.rating >= 1 && data.rating <= 5
+        && data.title is string && data.title.size() >= 3 && data.title.size() <= 120
+        && data.comment is string && data.comment.size() >= 10 && data.comment.size() <= 1200
+        && data.travelDate is string && data.travelDate.size() >= 4 && data.travelDate.size() <= 32
+        && data.createdAt is timestamp;
+    }
+
+    // Users public-safe profile preferences
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isVerifiedUser()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidUserProfile(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(userId)
+        && isValidUserProfile(incoming())
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'preferredCurrency', 'travelStyle', 'updatedAt']))
+        );
+      allow delete: if false;
+
+      // Isolated PII subcollection
+      match /private/{docId} {
+        allow get: if isValidId(userId) && isValidId(docId) && (isOwner(userId) || isAdmin());
+        allow list: if false;
+        allow create: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(docId)
+          && docId == 'info'
+          && isOwner(userId)
+          && exists(/databases/$(database)/documents/users/$(userId))
+          && isValidUserPrivateInfo(incoming())
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(docId)
+          && docId == 'info'
+          && exists(/databases/$(database)/documents/users/$(userId))
+          && isValidUserPrivateInfo(incoming())
+          && incoming().uid == existing().uid
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            isAdmin() ||
+            (isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['email', 'phone', 'homeAirport', 'passportNationality', 'updatedAt']))
+          );
+        allow delete: if false;
+      }
+
+      // User saved trips subcollection
+      match /savedTrips/{tripId} {
+        allow get: if isValidId(userId) && isValidId(tripId) && (isOwner(userId) || isAdmin());
+        allow list: if isSignedIn() && isOwner(userId) && resource.data.userId == request.auth.uid;
+        allow create: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(tripId)
+          && isOwner(userId)
+          && exists(/databases/$(database)/documents/users/$(userId))
+          && isValidSavedTrip(incoming())
+          && incoming().createdAt == request.time;
+        allow update: if false;
+        allow delete: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(tripId)
+          && isOwner(userId)
+          && existing().userId == request.auth.uid;
+      }
+    }
+
+    // Bookings collection
+    match /bookings/{bookingId} {
+      allow get: if isValidId(bookingId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isVerifiedUser()
+        && isValidId(bookingId)
+        && isValidBooking(incoming())
+        && incoming().userId == request.auth.uid
+        && incoming().status == 'confirmed'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(bookingId)
+        && isValidBooking(incoming())
+        && incoming().userId == existing().userId
+        && incoming().bookingRef == existing().bookingRef
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            existing().userId == request.auth.uid &&
+            existing().status == 'confirmed' &&
+            incoming().status == 'cancellation_requested' &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'cancellationReason', 'updatedAt']) &&
+            ('cancellationReason' in incoming()) &&
+            incoming().cancellationReason.size() >= 5
+          )
+        );
+      allow delete: if false;
+    }
+
+    // Support tickets collection
+    match /supportTickets/{ticketId} {
+      allow get: if isValidId(ticketId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isVerifiedUser()
+        && isValidId(ticketId)
+        && isValidSupportTicket(incoming())
+        && incoming().userId == request.auth.uid
+        && incoming().status == 'open'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isValidId(ticketId)
+        && isValidSupportTicket(incoming())
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && isAdmin();
+      allow delete: if false;
+    }
+
+    // Publicly readable traveler reviews (no PII stored)
+    match /reviews/{reviewId} {
+      allow get: if isValidId(reviewId);
+      allow list: if true;
+      allow create: if isVerifiedUser()
+        && isValidId(reviewId)
+        && isValidReview(incoming())
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isVerifiedUser()
+        && isValidId(reviewId)
+        && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // Admins registry (read-only lookup for security rules)
+    match /admins/{adminId} {
+      allow get: if isValidId(adminId) && isSignedIn() && (request.auth.uid == adminId || isAdmin());
+      allow list, write: if false;
+    }
+  }
+}
